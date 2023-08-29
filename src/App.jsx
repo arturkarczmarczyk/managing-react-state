@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useEffect} from "react";
 import "./App.css";
 import Footer from "./Footer";
 import Header from "./Header";
@@ -9,20 +9,57 @@ import Detail from "./Detail";
 import Cart from "./Cart";
 
 export default function App() {
-  return (
-    <>
-      <div className="content">
-        <Header />
-        <main>
-            <Routes>
-                <Route path={"/"} element={<h1>Welcome to Carved Rock Fitness</h1>} />
-                <Route path={"/:category"} element={<Products />} />
-                <Route path={"/:category/:id"} element={<Detail />} />
-                <Route path={"/cart"} element={<Cart />} />
-            </Routes>
-        </main>
-      </div>
-      <Footer />
-    </>
-  );
+    const [cart, setCart] = React.useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem("cart")) ?? [];
+        } catch (e) {
+            console.error("The cart could not be parsed into JSON.");
+            return [];
+        }
+    });
+
+    useEffect(() => localStorage.setItem("cart", JSON.stringify(cart)), [cart]);
+
+    function addToCart(id, sku) {
+        setCart((items) => {
+            const itemInCart = items.find((i) => i.sku === sku);
+            if (itemInCart) {
+                // return new array with the matching item replaced
+                return items.map( (i) => i.sku === sku ? {...i, quantity: i.quantity + 1} : i);
+            } else {
+                // return new array with the new item prepended
+                return [{id, sku, quantity: 1}, ...items];
+            }
+        })
+    }
+
+    function updateQuantity(sku, quantity) {
+        setCart((items) => {
+            const itemInCart = items.find((i) => i.sku === sku);
+            if (! itemInCart) {
+                return;
+            }
+            if (quantity === 0) {
+                return items.filter((i) => i.sku !== sku);
+            }
+            return items.map((i) => i.sku === sku ? {...i, quantity} : i);
+        });
+    }
+
+    return (
+        <>
+            <div className="content">
+                <Header/>
+                <main>
+                    <Routes>
+                        <Route path={"/"} element={<h1>Welcome to Carved Rock Fitness</h1>}/>
+                        <Route path={"/:category"} element={<Products/>}/>
+                        <Route path={"/:category/:id"} element={<Detail addToCart={addToCart}/>}/>
+                        <Route path={"/cart"} element={<Cart cart={cart} updateQuantity={updateQuantity} />}/>
+                    </Routes>
+                </main>
+            </div>
+            <Footer/>
+        </>
+    );
 }
